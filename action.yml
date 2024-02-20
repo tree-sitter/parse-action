@@ -1,0 +1,22 @@
+name: Tree-sitter parse examples
+description: Parse a corpus of examples with tree-sitter
+
+branding:
+  color: orange
+  icon: align-left
+
+inputs:
+  examples:
+    description: The glob pattern of the example files
+    required: true
+  tree-sitter:
+    description: The tree-sitter executable
+    default: ${{github.workspace}}/node_modules/.bin/tree-sitter
+
+outputs:
+  failures:
+    description: The files with parsing failures
+
+runs:
+  using: node20
+  main: dist/index.js
