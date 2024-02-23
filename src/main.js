@@ -10,23 +10,22 @@ const examples = action.getInput('examples', { required: true });
 
 const files = await glob(examples, { matchDirectories: false }).then(g => g.glob());
 
-/** @type {[string, string][]} */
+/** @type {string[]} */
 const failures = [];
 
 action.startGroup('Parsing examples');
 
 for (let f of files) {
   f = relative(process.env.GITHUB_WORKSPACE, f);
-  const res = await exec(ts, ['parse', '-t', f], {
+  const res = await exec(ts, ['parse', '-q', '-t', f], {
     silent: true, ignoreReturnCode: true
   });
-  const out = res.stdout.split(/\r?\n/).slice(0, -1);
-  const summary = out.pop();
+  const summary = res.stdout.trimEnd();
 
   if (res.exitCode == 0) {
     action.info(summary, { file: f });
   } else {
-    failures.push([f, out.join('\n')]);
+    failures.push(f);
     action.error(summary, { file: f });
   }
 }
@@ -54,18 +53,8 @@ if (failures.length == 0) {
   action.setOutput('failures', '');
 } else {
   action.summary.addHeading('Failures', 3);
-  for (let [file, tree] of failures) {
-    action.summary.addRaw(`
-      <details><summary><h4>${file}</h4></summary>
-
-      ~~~clojure
-      ${tree}
-      ~~~
-      </details>
-    `.replace(/^ {6}/mg, '').trim());
-  }
-
-  action.setOutput('failures', failures.map(f => f[0]).join('\n'));
+  action.summary.addList(failures);
+  action.setOutput('failures', failures.join('\n'));
   action.setFailed(`Failed to parse ${failures.length}/${files.length} files`);
 }
 
