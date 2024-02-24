@@ -1,10 +1,10 @@
-# Tree-sitter parse examples
+# Tree-sitter parse files
 
 ## Options
 
 ```yaml
-examples:
-  description: The glob pattern of the example files
+files:
+  description: The glob patterns of the files to parse
   required: true
 tree-sitter:
   description: The tree-sitter executable
@@ -29,19 +29,15 @@ jobs:
   examples:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Install dependencies
-        run: npm install
-      - name: Parse examples
-        uses: tree-sitter-grammars/tree-sitter-examples-action@v1
+      - uses: actions/checkout@v4
+      - run: npm install
+      - uses: tree-sitter/parse-action@v2
         id: examples
         continue-on-error: true
         with:
-          examples: |-
+          files: |-
             examples/**
-      - name: Upload failures artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         if: steps.examples.outputs.failures != ''
         with:
           name: failures

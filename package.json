@@ -1,7 +1,8 @@
 {
-  "name": "tree-sitter-examples-action",
+  "name": "@tree-sitter/parse-action",
   "description": "A GitHub action for parsing examples with tree-sitter",
-  "version": "0.1.0",
+  "repository": "tree-sitter/parse-action",
+  "version": "0.2.0",
   "license": "MIT",
   "main": "src/main.js",
   "type": "module",

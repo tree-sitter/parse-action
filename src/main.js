@@ -3,30 +3,29 @@ import * as action from '@actions/core'
 import { create as glob } from '@actions/glob'
 import { getExecOutput as exec } from '@actions/exec'
 
-process.chdir(process.env.GITHUB_WORKSPACE);
-
 const ts = action.getInput('tree-sitter', { required: true });
-const examples = action.getInput('examples', { required: true });
+const patterns = action.getInput('files', { required: true });
 
-const files = await glob(examples, { matchDirectories: false }).then(g => g.glob());
+const files = await glob(patterns, { matchDirectories: false }).then(g => g.glob());
+
+const cwd = process.env.GITHUB_WORKSPACE || process.cwd();
 
 /** @type {string[]} */
 const failures = [];
 
 action.startGroup('Parsing examples');
 
-for (let f of files) {
-  f = relative(process.env.GITHUB_WORKSPACE, f);
-  const res = await exec(ts, ['parse', '-q', '-t', f], {
-    silent: true, ignoreReturnCode: true
+for (let file of files.map(f => relative(cwd, f))) {
+  const res = await exec(ts, ['parse', '-q', '-t', file], {
+    cwd, silent: true, ignoreReturnCode: true
   });
   const summary = res.stdout.trimEnd();
 
   if (res.exitCode == 0) {
-    action.info(summary, { file: f });
+    action.info(summary, { file });
   } else {
-    failures.push(f);
-    action.error(summary, { file: f });
+    failures.push(file);
+    action.error(summary, { file });
   }
 }
 
