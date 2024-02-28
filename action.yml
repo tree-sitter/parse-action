@@ -7,15 +7,17 @@ branding:
 
 inputs:
   files:
-    description: The glob patterns of the files to parse
+    description: Glob patterns of files to be parsed
     required: true
+  invalid-files:
+    description: Glob patterns of files that are invalid
   tree-sitter:
     description: The tree-sitter executable
     default: node_modules/.bin/tree-sitter
 
 outputs:
   failures:
-    description: The files with parsing failures
+    description: The files with parsing errors
 
 runs:
   using: node20

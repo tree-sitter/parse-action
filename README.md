@@ -4,8 +4,10 @@
 
 ```yaml
 files:
-  description: The glob patterns of the files to parse
+  description: Glob patterns of files to be parsed
   required: true
+invalid-files:
+  description: Glob patterns of files that are invalid
 tree-sitter:
   description: The tree-sitter executable
   default: node_modules/.bin/tree-sitter
@@ -31,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm install
-      - uses: tree-sitter/parse-action@v2
+      - uses: tree-sitter/parse-action@v3
         id: examples
         continue-on-error: true
         with:
