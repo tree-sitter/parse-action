@@ -1,4 +1,3 @@
-import { relative } from 'node:path';
 import * as action from '@actions/core'
 import { create as glob } from '@actions/glob'
 import { getExecOutput as exec } from '@actions/exec'
@@ -6,48 +5,50 @@ import { getExecOutput as exec } from '@actions/exec'
 const cwd = process.env.GITHUB_WORKSPACE ?? process.cwd();
 
 /**
- * @param {string} input
- * @param {boolean} required
+ * @param {string} patterns
  */
-async function getFiles(input, required) {
-  const patterns = action.getInput(input, { required });
+async function getFiles(patterns) {
   if (patterns.trim() == '') return [];
-  const matcher = glob(patterns, { matchDirectories: false });
-  return (await matcher.then(g => g.glob())).map(f => relative(cwd, f));
+  const globber = await glob(patterns, { matchDirectories: false });
+  return await globber.glob();
 }
 
 const ts = action.getInput('tree-sitter', { required: true });
 
-const allFiles = await getFiles('files', true);
-const badFiles = await getFiles('invalid-files', false);
+const filePatterns = action.getMultilineInput('files', { required: true });
+const invalidFiles = await getFiles(action.getInput('invalid-files'));
 
-const successful = [], invalid = [], failures = [];
+const invalidFilesSet = new Set(invalidFiles);
 
 action.startGroup('Parsing files');
 
-for (const file of allFiles) {
-  const res = await exec(ts, ['parse', '-q', '-t', file], {
-    cwd, silent: true, ignoreReturnCode: true
-  });
-  const summary = res.stdout.trimEnd();
+const res = await exec(ts, ['parse', '-q', '-t', ...filePatterns], {
+  cwd, ignoreReturnCode: true
+});
 
-  if (res.exitCode == 0) {
-    successful.push(file);
-    if (badFiles.includes(file)) {
-      action.warning(summary + ' [INVALID]', { file, title: 'Invalid syntax' });
+let totalSuccess = 0;
+let totalInvalid = 0;
+const failures = [];
+
+for (const outputLine of res.stdout.trim().split('\n')) {
+  const result = outputLine.trim();
+  const [file] = result.split(' ', 1);
+  if (result.endsWith(')')) {
+    if (invalidFilesSet.has(file)) {
+      action.warning(result, { file, title: 'Invalid syntax' });
+      totalInvalid += 1;
     } else {
-      action.info(summary);
+      action.error(result, { file, title: 'Parsing error' });
+      failures.push(result);
     }
-  } else if (badFiles.includes(file)) {
-    invalid.push(file);
-    action.info(summary + ' [KNOWN]');
   } else {
-    failures.push(file);
-    action.error(summary, { file, title: 'Parsing error' });
+    totalSuccess += 1;
   }
 }
 
 action.endGroup();
+
+const totalFiles = totalSuccess + totalInvalid + failures.length;
 
 action.summary
   .addHeading('Parsing results', 2)
@@ -59,20 +60,17 @@ action.summary
       { data: 'Parsing errors', header: true },
     ],
     [
-      { data: allFiles.length.toString() },
-      { data: successful.length.toString() },
-      { data: invalid.length.toString() },
+      { data: totalFiles.toString() },
+      { data: totalSuccess.toString() },
+      { data: totalInvalid.toString() },
       { data: failures.length.toString() },
     ]
   ]);
 
-if (failures.length == 0) {
-  action.setOutput('failures', '');
-} else {
-  action.summary.addHeading('Failures', 3);
-  action.summary.addList(failures);
-  action.setOutput('failures', failures.join('\n'));
-  action.setFailed(`Failed to parse ${failures.length}/${allFiles.length} files`);
-}
-
 await action.summary.write();
+
+action.setOutput('failures', failures.join('\n'));
+
+if (failures) {
+  action.setFailed(`Failed to parse ${failures}/${totalFiles} files`);
+}
