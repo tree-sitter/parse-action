@@ -6,8 +6,12 @@
 files:
   description: Glob patterns of files to be parsed
   required: true
+files-list:
+  description: File with glob patterns of files to be parsed
 invalid-files:
   description: Glob patterns of files that are invalid
+invalid-files-list:
+  description: File with glob patterns of files that are invalid
 tree-sitter:
   description: The tree-sitter executable
   default: node_modules/.bin/tree-sitter
