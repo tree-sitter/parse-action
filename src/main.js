@@ -1,4 +1,4 @@
-import { appendFileSync, existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import * as action from '@actions/core'
@@ -17,21 +17,21 @@ async function getFiles(patterns) {
   return (await globber.glob()).map(path => action.toPosixPath(relative(cwd, path)));
 }
 
-const defaultPatternsFile = join(temp, 'parser-files-list')
-const patternsFile = action.getInput('files-list') || defaultPatternsFile;
-const files = action.getInput('files', { required: patternsFile == defaultPatternsFile });
-appendFileSync(patternsFile, (await getFiles(files)).join('\n'));
+const pathsFile = join(temp, 'parser-files-list');
+const ts = action.getInput('tree-sitter', { required: true });
+const args = ['parse', '-q', '-t', '--paths', patternsFile];
+
+const patternsFile = action.getInput('files-list');
+const files = action.getInput('files', { required: !patternsFile });
+writeFileSync(pathsFile, (await getFiles(files)).join('\n'));
 
 const invalidFiles = new Set(await getFiles(action.getInput('invalid-files')));
 const invalidPatternsFile = action.getInput('invalid-files-list');
 if (existsSync(invalidPatternsFile)) {
-  for (const file of readFileSync(invalidPatternsFile, 'utf8').split('\n')) {
+  for (const file of await getFiles(readFileSync(invalidPatternsFile, 'utf8'))) {
     invalidFiles.add(file.trimEnd());
   }
 }
-
-const ts = action.getInput('tree-sitter', { required: true });
-const args = ['parse', '-q', '-t', '--paths', patternsFile];
 
 action.startGroup('Parsing files');
 
