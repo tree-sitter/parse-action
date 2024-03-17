@@ -11,27 +11,41 @@ const temp = process.env.RUNNER_TEMP ?? tmpdir();
 /**
  * @param {string} patterns
  */
-async function getFiles(patterns) {
+async function expand(patterns) {
   if (patterns.trim() == '') return [];
   const globber = await glob(patterns, { matchDirectories: false });
   return (await globber.glob()).map(path => action.toPosixPath(relative(cwd, path)));
 }
 
+/**
+ * @param {string} listFile
+ * @param {string} patterns
+ */
+async function getFiles(listFile, patterns) {
+  const files = new Set(await expand(patterns));
+  if (existsSync(listFile)) {
+    const contents = readFileSync(listFile, 'utf8');
+    for (const file of await expand(contents)) {
+      files.add(file.trimEnd());
+    }
+  }
+  return files;
+}
+
 const pathsFile = join(temp, 'parser-files-list');
 const ts = action.getInput('tree-sitter', { required: true });
-const args = ['parse', '-q', '-t', '--paths', patternsFile];
+const args = ['parse', '-q', '-t', '--paths', pathsFile];
 
-const patternsFile = action.getInput('files-list');
-const files = action.getInput('files', { required: !patternsFile });
-writeFileSync(pathsFile, (await getFiles(files)).join('\n'));
+const files = await getFiles(
+  action.getInput('files-list'),
+  action.getInput('files', { required: !patternsFile })
+);
+writeFileSync(pathsFile, Array.from(files).join('\n'));
 
-const invalidFiles = new Set(await getFiles(action.getInput('invalid-files')));
-const invalidPatternsFile = action.getInput('invalid-files-list');
-if (existsSync(invalidPatternsFile)) {
-  for (const file of await getFiles(readFileSync(invalidPatternsFile, 'utf8'))) {
-    invalidFiles.add(file.trimEnd());
-  }
-}
+const invalidFiles = await getFiles(
+  action.getInput('invalid-files-list'),
+  action.getInput('invalid-files')
+);
 
 action.startGroup('Parsing files');
 
@@ -95,10 +109,10 @@ action.summary
     ]
   ]);
 
-action.setOutput('failures', Array.from(failures).join('\n'));
-
 if (failures.size > 0) {
-  action.summary.addHeading('Failures', 3).addList(Array.from(failures));
+  const failuresList = Array.from(failures);
+  action.setOutput('failures', failuresList.join('\n'));
+  action.summary.addHeading('Failures', 3).addList(failuresList);
   action.setFailed(`Failed to parse ${failures.size}/${totalFiles - totalInvalid} files`);
 }
 
