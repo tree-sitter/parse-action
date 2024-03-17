@@ -25,7 +25,7 @@ appendFileSync(patternsFile, (await getFiles(files)).join('\n'));
 const invalidFiles = new Set(await getFiles(action.getInput('invalid-files')));
 const invalidPatternsFile = action.getInput('invalid-files-list');
 if (existsSync(invalidPatternsFile)) {
-  for (const file of await getFiles(readFileSync(invalidPatternsFile, 'utf8'))) {
+  for (const file of readFileSync(invalidPatternsFile, 'utf8').split('\n')) {
     invalidFiles.add(file.trimEnd());
   }
 }
@@ -35,7 +35,9 @@ const args = ['parse', '-q', '-t', '--paths', patternsFile];
 
 action.startGroup('Parsing files');
 
-const { stdout: output } = await exec(ts, args, { cwd, ignoreReturnCode: true });
+const { stdout: output } = await exec(ts, args, {
+  cwd, ignoreReturnCode: true, silent: true
+});
 
 let totalSuccess = 0, totalInvalid = 0;
 const failures = new Set();
@@ -67,6 +69,7 @@ for (const line of output.trimEnd().split('\n')) {
       endColumn: startLine == endLine ? endColumn : undefined,
     });
   } else {
+    action.info(result);
     totalSuccess += 1;
   }
 }
@@ -94,7 +97,7 @@ action.summary
 
 action.setOutput('failures', Array.from(failures).join('\n'));
 
-if (failures.length > 0) {
+if (failures.size > 0) {
   action.summary.addHeading('Failures', 3).addList(Array.from(failures));
   action.setFailed(`Failed to parse ${failures.size}/${totalFiles - totalInvalid} files`);
 }

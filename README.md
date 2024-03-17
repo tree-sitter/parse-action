@@ -6,18 +6,18 @@
 files:
   description: Glob patterns of files to be parsed
 files-list:
-  description: File with glob patterns of files to be parsed
+  description: A file containing filenames to be parsed
 invalid-files:
   description: Glob patterns of files that are invalid
 invalid-files-list:
-  description: File with glob patterns of files that are invalid
+  description: A file containing filenames that are invalid
 tree-sitter:
   description: The tree-sitter executable
   default: node_modules/.bin/tree-sitter
 ```
 
 > [!NOTE]
-> You must pass at least one of `files` and `files-list`.
+> You must supply at least one of `files` and `files-list`.
 
 ## Example configuration
 
