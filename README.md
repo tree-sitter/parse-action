@@ -5,7 +5,6 @@
 ```yaml
 files:
   description: Glob patterns of files to be parsed
-  required: true
 files-list:
   description: File with glob patterns of files to be parsed
 invalid-files:
@@ -16,6 +15,9 @@ tree-sitter:
   description: The tree-sitter executable
   default: node_modules/.bin/tree-sitter
 ```
+
+> [!NOTE]
+> You must pass at least one of `files` and `files-list`.
 
 ## Example configuration
 

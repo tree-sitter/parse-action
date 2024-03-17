@@ -17,20 +17,21 @@ async function getFiles(patterns) {
   return (await globber.glob()).map(path => action.toPosixPath(relative(cwd, path)));
 }
 
-const patternsFile = action.getInput('files-list') ?? join(temp, 'parser-files-list');
-const invalidPatternsFile = action.getInput('invalid-files-list');
-
-const ts = action.getInput('tree-sitter', { required: true });
-const args = ['parse', '-q', '-t', '--paths', patternsFile];
+const defaultPatternsFile = join(temp, 'parser-files-list')
+const patternsFile = action.getInput('files-list') || defaultPatternsFile;
+const files = action.getInput('files', { required: patternsFile == defaultPatternsFile });
+appendFileSync(patternsFile, (await getFiles(files)).join('\n'));
 
 const invalidFiles = new Set(await getFiles(action.getInput('invalid-files')));
+const invalidPatternsFile = action.getInput('invalid-files-list');
 if (existsSync(invalidPatternsFile)) {
   for (const file of await getFiles(readFileSync(invalidPatternsFile, 'utf8'))) {
     invalidFiles.add(file.trimEnd());
   }
 }
 
-appendFileSync(patternsFile, action.getMultilineInput('files', { required: true }).join('\n'));
+const ts = action.getInput('tree-sitter', { required: true });
+const args = ['parse', '-q', '-t', '--paths', patternsFile];
 
 action.startGroup('Parsing files');
 
@@ -55,13 +56,15 @@ for (const line of output.trimEnd().split('\n')) {
   } else if (result.endsWith(')')) {
     const matches = result.match(matcher);
     const [_, title, row1, col1, row2, col2] = matches;
+    const startLine = parseInt(row1 ?? 0) + 1;
+    const startColumn = parseInt(col1 ?? 0) + 1;
+    const endLine = parseInt(row2 ?? 0) + 1;
+    const endColumn = parseInt(col2 ?? 0) + 1;
     failures.add(file);
     action.error(result, {
-      file, title,
-      startLine: parseInt(row1 ?? 0) + 1,
-      startColumn: parseInt(col1 ?? 0) + 1,
-      endLine: parseInt(row2 ?? 0) + 1,
-      endColumn: parseInt(col2 ?? 0) + 1,
+      file, title, startLine, endLine,
+      startColumn: startLine == endLine ? startColumn : undefined,
+      endColumn: startLine == endLine ? endColumn : undefined,
     });
   } else {
     totalSuccess += 1;
@@ -89,10 +92,10 @@ action.summary
     ]
   ]);
 
-action.setOutput('failures', failures.join('\n'));
+action.setOutput('failures', Array.from(failures).join('\n'));
 
 if (failures.length > 0) {
-  action.summary.addHeading('Failures', 3).addList(failures);
+  action.summary.addHeading('Failures', 3).addList(Array.from(failures));
   action.setFailed(`Failed to parse ${failures.size}/${totalFiles - totalInvalid} files`);
 }
 
