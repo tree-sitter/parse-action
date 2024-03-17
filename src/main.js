@@ -36,10 +36,9 @@ const pathsFile = join(temp, 'parser-files-list');
 const ts = action.getInput('tree-sitter', { required: true });
 const args = ['parse', '-q', '-t', '--paths', pathsFile];
 
-const files = await getFiles(
-  action.getInput('files-list'),
-  action.getInput('files', { required: !patternsFile })
-);
+const patternsFile = action.getInput('files-list');
+const patterns = action.getInput('files', { required: !patternsFile });
+const files = await getFiles(patternsFile, patterns);
 writeFileSync(pathsFile, Array.from(files).join('\n'));
 
 const invalidFiles = await getFiles(
