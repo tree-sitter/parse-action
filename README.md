@@ -10,7 +10,7 @@ invalid-files:
   description: Glob patterns of files that are invalid
 tree-sitter:
   description: The tree-sitter executable
-  default: node_modules/.bin/tree-sitter
+  default: tree-sitter
 ```
 
 ## Example configuration
