@@ -1,9 +1,9 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
-import * as action from '@actions/core'
-import { create as glob } from '@actions/glob'
-import { getExecOutput as exec } from '@actions/exec'
+import * as action from '@actions/core';
+import { create as glob } from '@actions/glob';
+import { getExecOutput as exec } from '@actions/exec';
 
 const cwd = process.env.GITHUB_WORKSPACE ?? process.cwd();
 const temp = process.env.RUNNER_TEMP ?? tmpdir();
@@ -25,7 +25,6 @@ async function getFiles(listFile, patterns) {
 }
 
 const pathsFile = join(temp, 'parser-files-list');
-const ts = action.getInput('tree-sitter', { required: true });
 const args = ['parse', '-q', '-t', '--paths', pathsFile];
 
 const patternsFile = action.getInput('files-list');
@@ -39,7 +38,7 @@ const invalidFiles = await getFiles(
 
 action.startGroup('Parsing files');
 
-const { stdout: output } = await exec(ts, args, {
+const { stdout: output } = await exec('tree-sitter', args, {
   cwd, ignoreReturnCode: true, silent: true
 });
 
