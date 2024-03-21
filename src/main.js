@@ -7,6 +7,11 @@ import { getExecOutput as exec } from '@actions/exec';
 
 const cwd = process.env.GITHUB_WORKSPACE ?? process.cwd();
 const temp = process.env.RUNNER_TEMP ?? tmpdir();
+const os = process.env.RUNNER_OS ?? ({
+  'linux': 'Linux',
+  'darwin': 'macOS',
+  'win32': 'Windows',
+})[process.platform];
 
 /**
  * @param {string} listFile
@@ -55,12 +60,13 @@ for (const line of output.trimEnd().split('\n')) {
       action.info(result + ' [EXPECTED]');
       totalInvalid += 1;
     } else {
-      action.warning(result, { file, title: 'INVALID' });
+      action.warning(result, { file, title: `INVALID (${os})` });
       totalSuccess += 1;
     }
   } else if (result.endsWith(')')) {
     const matches = result.match(matcher);
-    const [_, title, row1, col1, row2, col2] = matches;
+    const [_, error, row1, col1, row2, col2] = matches;
+    const title = `${error} (${os})`;
     const startLine = parseInt(row1) + 1;
     const startColumn = parseInt(col1) + 1;
     const endLine = parseInt(row2) + 1;
