@@ -34,15 +34,15 @@ jobs:
   examples:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: npm install
-      - uses: tree-sitter/parse-action@v3
+      - uses: tree-sitter/parse-action@v5
         id: examples
         continue-on-error: true
         with:
           files: |-
             examples/**
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: steps.examples.outputs.failures != ''
         with:
           name: failures
